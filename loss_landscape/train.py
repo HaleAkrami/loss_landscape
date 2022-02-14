@@ -29,6 +29,9 @@ from utils.reproducibility import set_seed
 from utils.resnet import get_resnet
 from utils.utils import Subset_noisy
 from utils.losses import NormalizedCrossEntropy as NCE
+from utils.losses import MeanAbsoluteError as MAE
+from utils.losses import ReverseCrossEntropy as RCE
+
 import torch.nn as nn
 
 # "Fixed" hyperparameters
@@ -136,6 +139,10 @@ if __name__ == "__main__":
 
     if args.loss=='NCE':
         criterion= NCE(NUMClass,args.device)
+    elif  args.loss=='MAE':
+        criterion = MAE(NUMClass, args.device)
+    elif args.loss=='RCE':
+        criterion = RCE(NUMClass, args.device)
     else:
         criterion= nn.CrossEntropyLoss()
 
