@@ -28,6 +28,8 @@ from utils.nn_manipulation import count_params, flatten_grads
 from utils.reproducibility import set_seed
 from utils.resnet import get_resnet
 from utils.utils import Subset_noisy
+from utils.losses import NormalizedCrossEntropy as NCE
+import torch.nn as nn
 
 # "Fixed" hyperparameters
 NUM_EPOCHS = 200
@@ -35,6 +37,7 @@ NUM_EPOCHS = 200
 # We use 100-50-50 schedule here.
 LR = 0.1
 DATA_FOLDER = "../data/"
+NUMClass=10
 
 
 def get_dataloader(batch_size, train_size=None, test_size=None, transform_train_data=True, noise_rate=0):
@@ -47,7 +50,7 @@ def get_dataloader(batch_size, train_size=None, test_size=None, transform_train_
         test_size: How many samples to use from test dataset?
         transform_train_data: If we should transform (random crop/flip etc) or not
     """
-    NUMClass=10
+
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     transform = transforms.Compose(
@@ -82,7 +85,7 @@ def get_dataloader(batch_size, train_size=None, test_size=None, transform_train_
 
     if test_size:
         indices = numpy.random.permutation(numpy.arange(len(test_dataset)))
-        test_dataset = Subset(train_dataset, indices[:test_size])
+        test_dataset = Subset(test_dataset, indices[:test_size]) #error
 
     # Data loader
     train_loader = torch.utils.data.DataLoader(
@@ -124,9 +127,18 @@ if __name__ == "__main__":
         "--save_strategy", required=False, nargs="+", choices=["epoch", "init"],
         default=["epoch", "init"]
     )
-    parser.add_argument("--noise_rate",  required=False, default=0.2)
+    parser.add_argument("--noise_rate",  required=False, default=0)
+    parser.add_argument("--loss",required=False, default='CE',choices=["CE,MAE,GCE,RCE"])
 
     args = parser.parse_args()
+
+
+
+    if args.loss=='NCE':
+        criterion= NCE(NUMClass,args.device)
+    else:
+        criterion= nn.CrossEntropyLoss()
+
 
     # set up logging
     os.makedirs(f"{args.result_folder}/ckpt", exist_ok=True)
@@ -184,7 +196,8 @@ if __name__ == "__main__":
 
             # Forward pass
             outputs = model(images)
-            loss = torch.nn.functional.cross_entropy(outputs, labels)
+
+            loss = criterion(outputs, labels)
 
             # Backward and optimize
             optimizer.zero_grad()
